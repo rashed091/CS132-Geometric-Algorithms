@@ -1,0 +1,126 @@
+{
+  "FigureName": "Figure 1.4",
+  "FigureType": "three_d_with_axes",
+  "FigureDescription": "Example 4: No Solutions",
+  "xmin": -5,
+  "xmax": 5,
+  "ymin": -5,
+  "ymax": 5,
+  "zmin": -5,
+  "zmax": 5,
+  "xlabel": "x_1",
+  "ylabel": "x_2",
+  "zlabel": "x_3",
+  "objects": [
+    {
+      "type": "polygonsurface",
+      "color": "#a52a2a",
+      "transparency": 0.3,
+      "points": [
+        {
+          "x": 2.886751345948129,
+          "y": 5.0,
+          "z": -5.0
+        },
+        {
+          "x": 2.886751345948129,
+          "y": -5.0,
+          "z": -5.0
+        },
+        {
+          "x": -2.886751345948129,
+          "y": -5.0,
+          "z": 5.0
+        },
+        {
+          "x": -2.886751345948129,
+          "y": 5.0,
+          "z": 5.0
+        }
+      ],
+      "triangleIndices": [
+        3,
+        1,
+        0,
+        2,
+        1,
+        3
+      ]
+    },
+    {
+      "type": "polygonsurface",
+      "color": "#008000",
+      "transparency": 0.3,
+      "points": [
+        {
+          "x": -0.5773502691896258,
+          "y": 5.0,
+          "z": 5.0
+        },
+        {
+          "x": -0.5773502691896258,
+          "y": -5.0,
+          "z": 5.0
+        },
+        {
+          "x": 5.0,
+          "y": -5.0,
+          "z": -4.6602540378443855
+        },
+        {
+          "x": 5.0,
+          "y": 5.0,
+          "z": -4.6602540378443855
+        }
+      ],
+      "triangleIndices": [
+        3,
+        1,
+        2,
+        0,
+        1,
+        3
+      ]
+    },
+    {
+      "type": "polygonsurface",
+      "color": "#0000ff",
+      "transparency": 0.3,
+      "points": [
+        {
+          "x": 0.5773502691896258,
+          "y": -5.0,
+          "z": -5.0
+        },
+        {
+          "x": -5.0,
+          "y": 5.0,
+          "z": 4.6602540378443855
+        },
+        {
+          "x": 0.5773502691896258,
+          "y": 5.0,
+          "z": -5.0
+        },
+        {
+          "x": -5.0,
+          "y": -5.0,
+          "z": 4.6602540378443855
+        }
+      ],
+      "triangleIndices": [
+        0,
+        2,
+        3,
+        3,
+        2,
+        1
+      ]
+    },
+    {
+      "type": "title",
+      "label": "Example 4"
+    }
+  ],
+  "displayAxes": false
+}

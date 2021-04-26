@@ -97,8 +97,8 @@ class two_d_figure:
         self.ax.spines['right'].set_color('none')
         self.ax.spines['bottom'].set_position('zero')
         self.ax.spines['top'].set_color('none')
-        self.ax.spines['left'].set_smart_bounds(True)
-        self.ax.spines['bottom'].set_smart_bounds(True)
+        # self.ax.spines['left'].set_smart_bounds(True)
+        # self.ax.spines['bottom'].set_smart_bounds(True)
         self.ax.xaxis.set_ticks_position('bottom')
         self.ax.yaxis.set_ticks_position('left')
         bounds = np.array([self.ax.axes.get_xlim(),
@@ -106,10 +106,55 @@ class two_d_figure:
         self.ax.plot(bounds[0][0],bounds[1][0],'')
         self.ax.plot(bounds[0][1],bounds[1][1],'')
 
+def set_axes_equal(ax):
+    '''Make axes of 3D plot have equal scale so that spheres appear as spheres,
+    cubes as cubes, etc..  This is one possible solution to Matplotlib's
+    ax.set_aspect('equal') and ax.axis('equal') not working for 3D.
+
+    Input
+      ax: a matplotlib axis, e.g., as output from plt.gca().
+
+      from https://stackoverflow.com/questions/13685386/matplotlib-equal-unit-length-with-equal-aspect-ratio-z-axis-is-not-equal-to
+    '''
+    x_limits = ax.get_xlim3d()
+    y_limits = ax.get_ylim3d()
+    z_limits = ax.get_zlim3d()
+
+    x_range = abs(x_limits[1] - x_limits[0])
+    x_middle = np.mean(x_limits)
+    y_range = abs(y_limits[1] - y_limits[0])
+    y_middle = np.mean(y_limits)
+    z_range = abs(z_limits[1] - z_limits[0])
+    z_middle = np.mean(z_limits)
+
+    # The plot bounding box is a sphere in the sense of the infinity
+    # norm, hence I call half the max range the plot radius.
+    plot_radius = 0.5*max([x_range, y_range, z_range])
+
+    ax.set_xlim3d([x_middle - plot_radius, x_middle + plot_radius])
+    ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
+    ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
+
+def perp_sym(vertex, pt1, pt2, size):
+    ''' Construct the two lines needed to create a perpendicular-symbol
+    at vertex vertex and heading toward points pt1 and pt2, given size
+    Usage: 
+    perpline1, perpline2 = perp_sym(...)
+    plt.plot(perpline1[0], perpline1[1], 'k', lw = 1)
+    plt.plot(perpline2[0], perpline2[1], 'k', lw = 1)
+    '''
+    arm1 = pt1 - vertex
+    arm2 = pt2 - vertex
+    arm1unit = arm1 / np.linalg.norm(arm1)
+    arm2unit = arm2 / np.linalg.norm(arm2)
+    leg1 = np.array([vertex, vertex + (size * arm1unit)]) + (size * arm2unit)
+    leg2 = np.array([vertex, vertex + (size * arm2unit)]) + (size * arm1unit)
+    return((leg1.T, leg2.T))
+    
 class three_d_figure:
     
     def __init__ (self,
-                      fig_name,
+                      fig_num,
                       fig_desc = '',
                       xmin = -3.0,
                       xmax = 3.0,
@@ -119,7 +164,15 @@ class three_d_figure:
                       zmax = 3.0,
                       figsize=(6,4),
                       qr = None,
-                      displayAxes = True):
+                      displayAxes = True,
+                      equalAxes = True):
+
+        if len(fig_num) != 2:
+            raise ValueError('fig_num should be (lec, fig)')
+
+        fig_name = f'Figure {fig_num[0]}.{fig_num[1]}'
+        self.fig_num = fig_num
+        
         # possible values: None (no QR code displayed),
         # url (url based QR code displayed), direct
         valid_qr = [None, 'url', 'direct']
@@ -130,11 +183,17 @@ class three_d_figure:
         if self.qr == None:
             # only plot the figure, no QR code
             self.ax = self.fig.add_subplot(111, projection='3d')
+                                               #, proj_type='ortho')
+            # this is not implemented in mp3d as of Apr 2020
+            # self.ax.set_aspect('equal')
+            if equalAxes:
+                set_axes_equal(self.ax)
         else:
             # plot the figure and the QR code next to it
             self.ax = self.fig.add_subplot(121, projection='3d', position=[0,0,1,1])
             self.ax2 = self.fig.add_subplot(122,position=[1.2, 0.125, 0.75, 0.75])
         # self.ax.axes.set_title(fig_desc)
+        self.equalAxes = equalAxes
         self.ax.axes.set_xlim([xmin, xmax])
         self.ax.axes.set_ylim([ymin, ymax])
         self.ax.axes.set_zlim([zmin, zmax])
@@ -159,11 +218,12 @@ class three_d_figure:
 
     # at present, this only hides axes in the json (app)
     # axes are draw in matplotlib in all cases
-    def hideAxes():
-        self.desc['displayAxes'] = false
+    def hideAxes(self):
+        self.desc['displayAxes'] = False
+        # can we use plt.axes('off') here? 
 
-    def showAxes():
-        self.desc['displayAxes'] = true
+    def showAxes(self):
+        self.desc['displayAxes'] = True
         
     def plotPoint (self, x1, x2, x3, color='r', alpha=1.0):
         # do the plotting
@@ -174,7 +234,7 @@ class three_d_figure:
             {'type': 'point',
              'transparency': alpha,
              'color': hex_color,
-             'points': [{'x': x1, 'y': x2, 'z': x3}]})
+             'points': [{'x': float(x1), 'y': float(x2), 'z': float(x3)}]})
 
     def plotLinEqn(self, l1, color='Green', alpha=0.3):
         """
@@ -249,16 +309,21 @@ class three_d_figure:
                     points.append(tuple(pt))
         return set(points)
 
-    def text(self, x, y, z, mpl_label, json_label, size):
+    def text(self, x, y, z, mpl_label, json_label, size, color='k'):
+        hex_color = colors.to_hex(color)
         self.desc['objects'].append({
             'type': 'text', 
             'content': json_label,
             'size': size,
-            'points': [{'x': x, 'y': y, 'z': z}]})
+            'color': hex_color,
+            'points': [{'x': float(x), 'y': float(y), 'z': float(z)}]})
         self.ax.text(x, y, z, mpl_label, size=size)
 
-    def set_title(self, mpl_title, json_title, size):
+    def set_title(self, mpl_title, json_title = None, size = 12):
+        self.fig.suptitle(f'Figure {self.fig_num[0]:d}.{self.fig_num[1]:d}')
         self.ax.set_title(mpl_title, size=size)
+        if json_title == None:
+            json_title = mpl_title
         self.desc['objects'].append({'type': 'title', 'label': json_title})
 
     def plotLine(self, in_ptlist, color, line_type='-', alpha=1.0):
@@ -275,6 +340,14 @@ class three_d_figure:
                          line_type,
                          zs = ptlist[2,:],
                          color=color)
+
+    def plotPerpSym(self, vertex, pt1, pt2, size):
+        ''' Plot in 3D the two lines needed to create a perpendicular-symbol
+        at vertex vertex and heading toward points pt1 and pt2, given size
+        '''
+        perpline1, perpline2 = perp_sym(vertex, pt1, pt2, size)
+        self.plotLine([perpline1[:,0], perpline1[:,1]], 'k', '-')
+        self.plotLine([perpline2[:,0], perpline2[:,1]], 'k', '-')
         
     def plotIntersection(self, eq1, eq2, line_type='-',color='Blue'):
         """
@@ -583,7 +656,7 @@ class three_d_figure:
         hex_color = colors.to_hex(color)
         self.desc['objects'].append(
                 {'type': 'quadraticform',
-                 'color': hex_color,
+                     'color': hex_color,
                  'transparency': alpha,
                  'a11': qf_mat[0][0],
                  'a12': qf_mat[0][1],
@@ -610,7 +683,11 @@ class three_d_figure:
                                     interval=100, 
                                     repeat=False)
         
-    def save(self, file_name):
+    def save(self, qrviz = None):
+        file_name = f'Fig{self.fig_num[0]:02d}.{self.fig_num[1]:d}'
+        
+        if self.equalAxes:
+            set_axes_equal(self.ax)
         fname = 'json/{}.json'.format(file_name)
         with open(fname, 'w') as fp:
             json.dump(self.desc, fp, indent=2)
@@ -633,11 +710,18 @@ class three_d_figure:
                 qr_code.add_data("a"+url_string+d)
             qr_code.make(fit=True)
             img = qr_code.make_image()
-            self.ax2.imshow(img, cmap="gray")
-            # self.ax2.imshow(img)
-            self.ax2.set_axis_off()
+            if qrviz == 'show':
+                self.ax2.imshow(img, cmap="gray")
+                # self.ax2.imshow(img)
+                self.ax2.set_axis_off()
+                return None
+            elif qrviz == 'save':
+                return img
             # plt.subplots_adjust(wspace=1.)
             # plt.tight_layout()
+
+    def dont_save(self):
+        return
 
     def json(self):
         return(json.dumps(self.desc))
@@ -716,13 +800,18 @@ def centerAxes (ax):
     ax.spines['right'].set_color('none')
     ax.spines['bottom'].set_position('zero')
     ax.spines['top'].set_color('none')
-    ax.spines['left'].set_smart_bounds(True)
-    ax.spines['bottom'].set_smart_bounds(True)
+    #ax.spines['left'].set_smart_bounds(True)
+    #ax.spines['bottom'].set_smart_bounds(True)
     ax.xaxis.set_ticks_position('bottom')
     ax.yaxis.set_ticks_position('left')
     bounds = np.array([ax.axes.get_xlim(), ax.axes.get_ylim()])
     ax.plot(bounds[0][0],bounds[1][0],'')
     ax.plot(bounds[0][1],bounds[1][1],'')
+
+def noAxes(ax):
+    ax.axes.get_yaxis().set_visible(False)
+    ax.axes.get_xaxis().set_visible(False)
+    ax.set_frame_on(False)
         
 def plotSetup3d(xmin = -3.0, xmax = 3.0, ymin = -3.0, ymax = 3.0, zmin = -3.0, zmax = 3.0, figsize=(6,4)):
     fig = plt.figure(figsize=figsize)

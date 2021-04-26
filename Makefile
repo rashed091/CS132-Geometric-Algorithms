@@ -31,11 +31,17 @@ figures:
 	jupyter nbconvert --to notebook --inplace --execute *.ipynb
 
 movefigures:
-	scp json/* crovella@csa2.bu.edu:www/cs132-figures
+	(cd json; python generate-configs.py)
+	scp json/Fig*json crovella@csa2.bu.edu:www/cs132-figures
 	ssh crovella@csa2.bu.edu 'chmod a+r ~/www/cs132-figures/*'
+	scp json/config*.json crovella@csa2.bu.edu:www/diagramar
+	ssh crovella@csa2.bu.edu 'chmod a+r ~/www/diagramar/*'
 
-
-
+movebook:
+	jupyter-book build .
+	ssh crovella@csa2.bu.edu '/bin/rm -rf ~/www/cs132-book'
+	scp -r _build/html crovella@csa2.bu.edu:www/cs132-book
+	ssh crovella@csa2.bu.edu 'chmod -R a+rx ~/www/cs132-book'
 
 
 
